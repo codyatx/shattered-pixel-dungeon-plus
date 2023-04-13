@@ -74,6 +74,9 @@ import com.shatteredpixel.shatteredpixeldungeon.items.weapon.missiles.ThrowingSt
 import com.shatteredpixel.shatteredpixeldungeon.messages.Messages;
 import com.watabou.utils.DeviceCompat;
 
+import java.lang.reflect.InvocationTargetException;
+import java.util.Map;
+
 public enum HeroClass {
 
 	WARRIOR( HeroSubClass.BERSERKER, HeroSubClass.GLADIATOR ),
@@ -138,6 +141,30 @@ public enum HeroClass {
 			}
 		}
 
+		Map<String, Integer> customLoot = SPDSettings.customLoot();
+		for (String key : customLoot.keySet()) {
+			int value = customLoot.get(key);
+
+			Item item;
+			try {
+				Class<Item> lootClass = (Class<Item>) Class.forName(key);
+				item = lootClass.getConstructor(null).newInstance();
+			} catch (ClassNotFoundException e) {
+				throw new RuntimeException(e);
+			} catch (InstantiationException e) {
+				throw new RuntimeException(e);
+			} catch (IllegalAccessException e) {
+				throw new RuntimeException(e);
+			} catch (InvocationTargetException e) {
+				throw new RuntimeException(e);
+			} catch (NoSuchMethodException e) {
+				throw new RuntimeException(e);
+			}
+
+			item.identify();
+			item.quantity(value);
+			item.collect();
+		}
 	}
 
 	public Badges.Badge masteryBadge() {

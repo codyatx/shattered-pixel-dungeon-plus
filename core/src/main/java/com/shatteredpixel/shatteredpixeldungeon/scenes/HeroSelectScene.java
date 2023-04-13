@@ -37,6 +37,7 @@ import com.shatteredpixel.shatteredpixeldungeon.ui.Icons;
 import com.shatteredpixel.shatteredpixeldungeon.ui.RenderedTextBlock;
 import com.shatteredpixel.shatteredpixeldungeon.ui.StyledButton;
 import com.shatteredpixel.shatteredpixeldungeon.ui.Window;
+import com.shatteredpixel.shatteredpixeldungeon.windows.WndCustomLoot;
 import com.shatteredpixel.shatteredpixeldungeon.windows.WndOptions;
 import com.shatteredpixel.shatteredpixeldungeon.windows.WndTextInput;
 import com.shatteredpixel.shatteredpixeldungeon.utils.DungeonSeed;
@@ -721,6 +722,17 @@ public class HeroSelectScene extends PixelScene {
 				challengeButton.icon(Icons.get(SPDSettings.challenges() > 0 ? Icons.CHALLENGE_ON : Icons.CHALLENGE_OFF));
 				add(challengeButton);
 				buttons.add(challengeButton);
+
+				StyledButton customLootButton = new StyledButton(Chrome.Type.BLANK, Messages.get(WndCustomLoot.class, "title"), 6){
+					@Override
+					protected void onClick() {
+						ShatteredPixelDungeon.scene().addToFront(new WndCustomLoot());
+					}
+				};
+				customLootButton.leftJustify = true;
+				customLootButton.icon(Icons.get(Icons.PREFS));
+				add(customLootButton);
+				buttons.add(customLootButton);
 			}
 
 			for (int i = 1; i < buttons.size(); i++){

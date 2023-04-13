@@ -32,7 +32,9 @@ import com.watabou.utils.DeviceCompat;
 import com.watabou.utils.GameSettings;
 import com.watabou.utils.Point;
 
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 
 public class SPDSettings extends GameSettings {
 	
@@ -200,6 +202,7 @@ public class SPDSettings extends GameSettings {
 	public static final String KEY_LAST_CLASS	= "last_class";
 	public static final String KEY_CHALLENGES	= "challenges";
 	public static final String KEY_CUSTOM_SEED	= "custom_seed";
+	public static final String KEY_CUSTOM_LOOT	= "custom_loot";
 	public static final String KEY_LAST_DAILY	= "last_daily";
 	public static final String KEY_INTRO		= "intro";
 
@@ -235,6 +238,42 @@ public class SPDSettings extends GameSettings {
 
 	public static String customSeed() {
 		return getString( KEY_CUSTOM_SEED, "", 20);
+	}
+
+	public static void customLoot(Map<String, Integer> customLoot) {
+		StringBuilder lootString = new StringBuilder();
+
+		if (customLoot != null) {
+			for (String key : customLoot.keySet()) {
+				int value = customLoot.get(key);
+				lootString.append(key);
+				lootString.append("=");
+				lootString.append(value);
+				lootString.append(";");
+			}
+		}
+
+		put(KEY_CUSTOM_LOOT, lootString.toString());
+	}
+
+	public static Map<String, Integer> customLoot() {
+		Map<String, Integer> customLoot = new HashMap<>();
+
+		String lootString = getString(KEY_CUSTOM_LOOT, "");
+
+		if (lootString == null || lootString.equals("")) {
+			return customLoot;
+		}
+
+		for (String stringPair : lootString.split(";")) {
+			String[] parts = stringPair.split("=");
+			String key = parts[0];
+			int value = Integer.parseInt(parts[1]);
+
+			customLoot.put(key, value);
+		}
+
+		return customLoot;
 	}
 
 	public static void lastDaily( long value ){
