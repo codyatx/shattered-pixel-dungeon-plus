@@ -1,5 +1,7 @@
 package com.shatteredpixel.shatteredpixeldungeon.windows;
 
+import static com.shatteredpixel.shatteredpixeldungeon.messages.Messages.NO_TEXT_FOUND;
+
 import com.shatteredpixel.shatteredpixeldungeon.Assets;
 import com.shatteredpixel.shatteredpixeldungeon.SPDSettings;
 import com.shatteredpixel.shatteredpixeldungeon.ShatteredPixelDungeon;
@@ -8,6 +10,8 @@ import com.shatteredpixel.shatteredpixeldungeon.items.armor.*;
 import com.shatteredpixel.shatteredpixeldungeon.items.bags.*;
 import com.shatteredpixel.shatteredpixeldungeon.items.food.MeatPie;
 import com.shatteredpixel.shatteredpixeldungeon.items.potions.AlchemicalCatalyst;
+import com.shatteredpixel.shatteredpixeldungeon.items.potions.brews.*;
+import com.shatteredpixel.shatteredpixeldungeon.items.potions.elixirs.*;
 import com.shatteredpixel.shatteredpixeldungeon.items.potions.exotic.*;
 import com.shatteredpixel.shatteredpixeldungeon.items.quest.*;
 import com.shatteredpixel.shatteredpixeldungeon.items.scrolls.exotic.*;
@@ -143,10 +147,29 @@ public class WndCustomLoot extends Window {
         lootCategories.add(new LootCategory("Stones", true, false, Generator.Category.STONE.classes));
 
         Class<?>[] alchemy = new Class<?>[]{
-                Alchemize.class,
+                CausticBrew.class,
+                BlizzardBrew.class,
+                InfernalBrew.class,
+                ShockingBrew.class,
+                ElixirOfHoneyedHealing.class,
+                ElixirOfAquaticRejuvenation.class,
+                ElixirOfMight.class,
+                ElixirOfDragonsBlood.class,
+                ElixirOfIcyTouch.class,
+                ElixirOfToxicEssence.class,
+                ElixirOfArcaneArmor.class,
+                TelekineticGrab.class,
+                PhaseShift.class,
+                WildEnergy.class,
                 BeaconOfReturning.class,
-                FeatherFall.class,
                 SummonElemental.class,
+                AquaBlast.class,
+                ReclaimTrap.class,
+                FeatherFall.class,
+                Alchemize.class,
+                MagicalInfusion.class,
+                CurseInfusion.class,
+                Recycle.class,
                 ArcaneCatalyst.class,
                 AlchemicalCatalyst.class,
                 GooBlob.class,
@@ -336,32 +359,20 @@ public class WndCustomLoot extends Window {
 
                         Image icon = this.icon;
 
-                        if (lootCategory.isStackable) {
-                            ShatteredPixelDungeon.scene().addToFront(new WndLootCount(lootClass) {
-                                public void onBackPressed() {
-                                    super.onBackPressed();
-                                    int newCount = getLootCount(lootClass);
+                        ShatteredPixelDungeon.scene().addToFront(new WndLootCount(lootClass, lootCategory.isStackable) {
+                            public void onBackPressed() {
+                                super.onBackPressed();
+                                int newCount = getLootCount(lootClass);
 
-                                    if (newCount >= 1) {
-                                        setLootCount(lootClass, newCount);
-                                        icon.alpha(1);
-                                    } else {
-                                        setLootCount(lootClass, 0);
-                                        icon.alpha(0.5f);
-                                    }
+                                if (newCount >= 1) {
+                                    setLootCount(lootClass, newCount);
+                                    icon.alpha(1);
+                                } else {
+                                    setLootCount(lootClass, 0);
+                                    icon.alpha(0.5f);
                                 }
-                            });
-                        } else {
-                            int currentCount = getLootCount(lootClass);
-
-                            if (currentCount >= 1) {
-                                setLootCount(lootClass, 0);
-                                icon.alpha(0.5f);
-                            } else {
-                                setLootCount(lootClass, 1);
-                                icon.alpha(1);
                             }
-                        }
+                        });
                     }
                 };
 
@@ -390,10 +401,10 @@ public class WndCustomLoot extends Window {
         Class<Item> lootClass;
         RenderedTextBlock countLabel;
 
-        public WndLootCount(Class<Item> lootClass) {
+        public WndLootCount(Class<Item> lootClass, boolean stackable) {
             this.lootClass = lootClass;
 
-            RenderedTextBlock title = PixelScene.renderTextBlock("Amount", 12);
+            RenderedTextBlock title = PixelScene.renderTextBlock(Messages.titleCase(Messages.get(lootClass, "name")), 10);
             title.hardlight(TITLE_COLOR);
             title.setPos(
                     (WIDTH - title.width()) / 2,
@@ -402,6 +413,66 @@ public class WndCustomLoot extends Window {
             PixelScene.align(title);
             add(title);
 
+            float buttonY = title.bottom() + 4;
+
+            String descString = Messages.get(lootClass, "desc");
+            if (descString != null && !descString.equals("") && !descString.equals(NO_TEXT_FOUND)) {
+                RenderedTextBlock description = PixelScene.renderTextBlock(6);
+                description.text(descString, WIDTH);
+                description.setPos(0, title.bottom() + 4);
+                add(description);
+                buttonY = description.bottom() + 4;
+            }
+
+            String statsString = Messages.get(lootClass, "stats_desc", 0, 0, 0, 0, 0);
+            if (statsString != null && !statsString.equals("") && !statsString.equals(NO_TEXT_FOUND)) {
+                RenderedTextBlock statsDesc = PixelScene.renderTextBlock(6);
+                statsDesc.text(statsString, WIDTH);
+                statsDesc.setPos(0, buttonY + 4);
+                add(statsDesc);
+
+                buttonY = statsDesc.bottom() + 4;
+            }
+
+            float windowBottom;
+            if (stackable) {
+                windowBottom = renderStackable(buttonY);
+            } else {
+                windowBottom = renderNonStackable(buttonY);
+            }
+
+            resize(WIDTH, (int) (windowBottom));
+        }
+
+        private float renderNonStackable(float buttonY) {
+            int currentCount = getLootCount(lootClass);
+
+            String text = "Add";
+            if (currentCount >= 1) {
+                text = "Remove";
+            }
+
+            RedButton toggleItem = new RedButton(text) {
+                @Override
+                protected void onClick() {
+                    int count = getLootCount(lootClass);
+
+                    if (count >= 1) {
+                        setLootCount(lootClass, 0);
+                    } else {
+                        setLootCount(lootClass, 1);
+                    }
+
+                    onBackPressed();
+                }
+            };
+            toggleItem.setRect(0, buttonY, WIDTH, BTN_HEIGHT);
+            add(toggleItem);
+
+            return toggleItem.bottom();
+        }
+
+        private float renderStackable(float buttonY) {
             float buttonSize = WIDTH / 7f;
 
             RedButton set0 = new RedButton("0") {
@@ -411,7 +482,7 @@ public class WndCustomLoot extends Window {
                     updateCountLabel();
                 }
             };
-            set0.setRect(0, TTL_HEIGHT, buttonSize, buttonSize);
+            set0.setRect(0, buttonY, buttonSize, buttonSize);
             add(set0);
 
             RedButton minus10 = new RedButton("-10") {
@@ -426,7 +497,7 @@ public class WndCustomLoot extends Window {
                     updateCountLabel();
                 }
             };
-            minus10.setRect(buttonSize, TTL_HEIGHT, buttonSize, buttonSize);
+            minus10.setRect(buttonSize, buttonY, buttonSize, buttonSize);
             add(minus10);
 
             RedButton minus1 = new RedButton("-1") {
@@ -441,13 +512,11 @@ public class WndCustomLoot extends Window {
                     updateCountLabel();
                 }
             };
-            minus1.setRect(buttonSize * 2, TTL_HEIGHT, buttonSize, buttonSize);
+            minus1.setRect(buttonSize * 2, buttonY, buttonSize, buttonSize);
             add(minus1);
 
             countLabel = PixelScene.renderTextBlock(String.valueOf(getLootCount(lootClass)), 12);
-//            countLabel.hardlight(TITLE_COLOR);
-            countLabel.setPos(buttonSize * 3, TTL_HEIGHT);
-//            PixelScene.align(countLabel);
+            countLabel.setPos(buttonSize * 3, buttonY);
             add(countLabel);
 
             RedButton plus1 = new RedButton("+1") {
@@ -462,7 +531,7 @@ public class WndCustomLoot extends Window {
                     updateCountLabel();
                 }
             };
-            plus1.setRect(buttonSize * 4, TTL_HEIGHT, buttonSize, buttonSize);
+            plus1.setRect(buttonSize * 4, buttonY, buttonSize, buttonSize);
             add(plus1);
 
             RedButton plus10 = new RedButton("+10") {
@@ -477,7 +546,7 @@ public class WndCustomLoot extends Window {
                     updateCountLabel();
                 }
             };
-            plus10.setRect(buttonSize * 5, TTL_HEIGHT, buttonSize, buttonSize);
+            plus10.setRect(buttonSize * 5, buttonY, buttonSize, buttonSize);
             add(plus10);
 
             RedButton set100 = new RedButton("100") {
@@ -487,10 +556,10 @@ public class WndCustomLoot extends Window {
                     updateCountLabel();
                 }
             };
-            set100.setRect(buttonSize * 6, TTL_HEIGHT, buttonSize, buttonSize);
+            set100.setRect(buttonSize * 6, buttonY, buttonSize, buttonSize);
             add(set100);
 
-            resize(WIDTH, (int) (TTL_HEIGHT + buttonSize));
+            return minus10.bottom();
         }
 
         private void updateCountLabel() {
