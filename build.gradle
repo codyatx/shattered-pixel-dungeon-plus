@@ -14,7 +14,7 @@ allprojects {
         appName = 'SPD+'
         appPackageName = 'com.codygust.shatteredpixeldungeonplus'
 
-        appVersionCode = 697
+        appVersionCode = 701
         appVersionName = '2.0.1'
 
         appJavaCompatibility = JavaVersion.VERSION_1_8
