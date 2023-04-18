@@ -16,6 +16,7 @@ import com.shatteredpixel.shatteredpixeldungeon.items.potions.exotic.*;
 import com.shatteredpixel.shatteredpixeldungeon.items.quest.*;
 import com.shatteredpixel.shatteredpixeldungeon.items.scrolls.exotic.*;
 import com.shatteredpixel.shatteredpixeldungeon.items.spells.*;
+import com.shatteredpixel.shatteredpixeldungeon.items.weapon.SpiritBow;
 import com.shatteredpixel.shatteredpixeldungeon.messages.Messages;
 import com.shatteredpixel.shatteredpixeldungeon.scenes.PixelScene;
 import com.shatteredpixel.shatteredpixeldungeon.sprites.ItemSprite;
@@ -193,6 +194,8 @@ public class WndCustomLoot extends Window {
                 PotionBandolier.class,
                 MagicalHolster.class,
                 Ankh.class,
+                BrokenSeal.class,
+                SpiritBow.class,
                 CorpseDust.class,
                 TengusMask.class,
                 KingsCrown.class
