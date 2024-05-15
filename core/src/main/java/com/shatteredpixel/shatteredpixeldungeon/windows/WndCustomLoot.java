@@ -9,7 +9,7 @@ import com.shatteredpixel.shatteredpixeldungeon.items.*;
 import com.shatteredpixel.shatteredpixeldungeon.items.armor.*;
 import com.shatteredpixel.shatteredpixeldungeon.items.bags.*;
 import com.shatteredpixel.shatteredpixeldungeon.items.food.MeatPie;
-// import com.shatteredpixel.shatteredpixeldungeon.items.potions.AlchemicalCatalyst;
+import com.shatteredpixel.shatteredpixeldungeon.items.trinkets.*;
 import com.shatteredpixel.shatteredpixeldungeon.items.potions.brews.*;
 import com.shatteredpixel.shatteredpixeldungeon.items.potions.elixirs.*;
 import com.shatteredpixel.shatteredpixeldungeon.items.potions.exotic.*;
@@ -56,18 +56,6 @@ public class WndCustomLoot extends Window {
         PixelScene.align(title);
         add(title);
 
-        // Armor
-        // Weapons
-        // Artifacts
-        // Wands
-        // Rings
-        // Thrown Items
-        // Potions
-        // Scrolls
-        // Food
-        // Seeds
-        // Misc
-
         lootCategories = new ArrayList<>();
         buttons = new ArrayList<>();
         customLoot = SPDSettings.customLoot();
@@ -93,6 +81,7 @@ public class WndCustomLoot extends Window {
         lootCategories.add(new LootCategory("Artifacts", false,false,  Generator.Category.ARTIFACT.classes));
         lootCategories.add(new LootCategory("Rings", false,true,  Generator.Category.RING.classes));
         lootCategories.add(new LootCategory("Wands", false,false,  Generator.Category.WAND.classes));
+        lootCategories.add(new LootCategory("Trinkets", false, false, Generator.Category.TRINKET.classes));
 
         Class<?>[] missiles = combineLists(
                 Generator.Category.MIS_T1.classes,
@@ -124,6 +113,38 @@ public class WndCustomLoot extends Window {
 
         lootCategories.add(new LootCategory("Potions", true,true,  potions));
 
+        Class<?>[] alchemy = new Class<?>[]{
+                AquaBrew.class,
+                BlizzardBrew.class,
+                CausticBrew.class,
+                InfernalBrew.class,
+                ShockingBrew.class,
+                UnstableBrew.class,
+                ElixirOfAquaticRejuvenation.class,
+                ElixirOfArcaneArmor.class,
+                ElixirOfDragonsBlood.class,
+                ElixirOfFeatherFall.class,
+                ElixirOfHoneyedHealing.class,
+                ElixirOfIcyTouch.class,
+                ElixirOfMight.class,
+                ElixirOfToxicEssence.class,
+                UnstableSpell.class,
+                TelekineticGrab.class,
+                PhaseShift.class,
+                WildEnergy.class,
+                BeaconOfReturning.class,
+                SummonElemental.class,
+                ReclaimTrap.class,
+                Alchemize.class,
+                MagicalInfusion.class,
+                CurseInfusion.class,
+                Recycle.class,
+                GooBlob.class,
+                MetalShard.class
+        };
+
+        lootCategories.add(new LootCategory("Alchemy", true, false, alchemy));
+
         Class<?>[] exoticScrolls = new Class<?>[]{
                 ScrollOfDivination.class,
                 ScrollOfEnchantment.class,
@@ -147,38 +168,6 @@ public class WndCustomLoot extends Window {
 
         lootCategories.add(new LootCategory("Stones", true, false, Generator.Category.STONE.classes));
 
-        Class<?>[] alchemy = new Class<?>[]{
-                CausticBrew.class,
-                BlizzardBrew.class,
-                InfernalBrew.class,
-                ShockingBrew.class,
-                ElixirOfHoneyedHealing.class,
-                ElixirOfAquaticRejuvenation.class,
-                ElixirOfMight.class,
-                ElixirOfDragonsBlood.class,
-                ElixirOfIcyTouch.class,
-                ElixirOfToxicEssence.class,
-                ElixirOfArcaneArmor.class,
-                TelekineticGrab.class,
-                PhaseShift.class,
-                WildEnergy.class,
-                BeaconOfReturning.class,
-                SummonElemental.class,
-                // AquaBlast.class,
-                ReclaimTrap.class,
-                // FeatherFall.class,
-                Alchemize.class,
-                MagicalInfusion.class,
-                CurseInfusion.class,
-                Recycle.class,
-                // ArcaneCatalyst.class,
-                // AlchemicalCatalyst.class,
-                GooBlob.class,
-                MetalShard.class
-        };
-
-        lootCategories.add(new LootCategory("Alchemy", true, false, alchemy));
-
         Class<?>[] meatPie = new Class<?>[]{MeatPie.class};
         Class<?>[] food = combineLists(
                 meatPie,
@@ -198,7 +187,8 @@ public class WndCustomLoot extends Window {
                 SpiritBow.class,
                 CorpseDust.class,
                 TengusMask.class,
-                KingsCrown.class
+                KingsCrown.class,
+                TrinketCatalyst.class
         }));
 
         float pos = TTL_HEIGHT;
