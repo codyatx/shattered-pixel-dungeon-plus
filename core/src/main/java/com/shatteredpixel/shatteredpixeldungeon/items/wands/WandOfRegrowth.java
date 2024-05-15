@@ -3,7 +3,7 @@
  * Copyright (C) 2012-2015 Oleg Dolya
  *
  * Shattered Pixel Dungeon
- * Copyright (C) 2014-2023 Evan Debenham
+ * Copyright (C) 2014-2024 Evan Debenham
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,16 +27,9 @@ import com.shatteredpixel.shatteredpixeldungeon.Statistics;
 import com.shatteredpixel.shatteredpixeldungeon.actors.Actor;
 import com.shatteredpixel.shatteredpixeldungeon.actors.Char;
 import com.shatteredpixel.shatteredpixeldungeon.actors.buffs.AllyBuff;
-import com.shatteredpixel.shatteredpixeldungeon.actors.buffs.Amok;
 import com.shatteredpixel.shatteredpixeldungeon.actors.buffs.Buff;
-import com.shatteredpixel.shatteredpixeldungeon.actors.buffs.Corruption;
 import com.shatteredpixel.shatteredpixeldungeon.actors.buffs.Doom;
-import com.shatteredpixel.shatteredpixeldungeon.actors.buffs.Dread;
-import com.shatteredpixel.shatteredpixeldungeon.actors.buffs.Paralysis;
 import com.shatteredpixel.shatteredpixeldungeon.actors.buffs.Roots;
-import com.shatteredpixel.shatteredpixeldungeon.actors.buffs.Sleep;
-import com.shatteredpixel.shatteredpixeldungeon.actors.buffs.Terror;
-import com.shatteredpixel.shatteredpixeldungeon.actors.buffs.Vertigo;
 import com.shatteredpixel.shatteredpixeldungeon.actors.hero.Hero;
 import com.shatteredpixel.shatteredpixeldungeon.actors.hero.abilities.mage.WildMagic;
 import com.shatteredpixel.shatteredpixeldungeon.actors.mobs.DwarfKing;
@@ -250,7 +243,6 @@ public class WandOfRegrowth extends Wand {
 
 		// 4/6/8 distance
 		int maxDist = 2 + 2*chargesPerCast();
-		int dist = Math.min(bolt.dist, maxDist);
 
 		cone = new ConeAOE( bolt,
 				maxDist,
@@ -258,7 +250,11 @@ public class WandOfRegrowth extends Wand {
 				Ballistica.STOP_SOLID | Ballistica.STOP_TARGET);
 
 		//cast to cells at the tip, rather than all cells, better performance.
+		Ballistica longestRay = null;
 		for (Ballistica ray : cone.outerRays){
+			if (longestRay == null || ray.dist > longestRay.dist){
+				longestRay = ray;
+			}
 			((MagicMissile)curUser.sprite.parent.recycle( MagicMissile.class )).reset(
 					MagicMissile.FOLIAGE_CONE,
 					curUser.sprite,
@@ -267,11 +263,11 @@ public class WandOfRegrowth extends Wand {
 			);
 		}
 
-		//final zap at half distance, for timing of the actual wand effect
+		//final zap at half distance of the longest ray, for timing of the actual wand effect
 		MagicMissile.boltFromChar( curUser.sprite.parent,
 				MagicMissile.FOLIAGE_CONE,
 				curUser.sprite,
-				bolt.path.get(dist/2),
+				longestRay.path.get(longestRay.dist/2),
 				callback );
 		Sample.INSTANCE.play( Assets.Sounds.ZAP );
 	}
@@ -406,6 +402,7 @@ public class WandOfRegrowth extends Wand {
 		{
 			alignment = Alignment.NEUTRAL;
 			properties.add(Property.IMMOVABLE);
+			properties.add(Property.STATIC);
 
 			spriteClass = LotusSprite.class;
 
@@ -424,7 +421,7 @@ public class WandOfRegrowth extends Wand {
 		}
 
 		public float seedPreservation(){
-			return 0.40f + 0.04f*wandLvl;
+			return Math.min( 1f, 0.40f + 0.04f*wandLvl );
 		}
 
 		@Override
@@ -467,13 +464,6 @@ public class WandOfRegrowth extends Wand {
 		}
 
 		{
-			immunities.add( Paralysis.class );
-			immunities.add( Amok.class );
-			immunities.add( Sleep.class );
-			immunities.add( Terror.class );
-			immunities.add( Dread.class );
-			immunities.add( Vertigo.class );
-			immunities.add( AllyBuff.class );
 			immunities.add( Doom.class );
 		}
 

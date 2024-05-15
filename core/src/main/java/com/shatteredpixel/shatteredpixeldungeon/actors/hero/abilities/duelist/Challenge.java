@@ -3,7 +3,7 @@
  * Copyright (C) 2012-2015 Oleg Dolya
  *
  * Shattered Pixel Dungeon
- * Copyright (C) 2014-2023 Evan Debenham
+ * Copyright (C) 2014-2024 Evan Debenham
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,23 +29,26 @@ import com.shatteredpixel.shatteredpixeldungeon.actors.buffs.BlobImmunity;
 import com.shatteredpixel.shatteredpixeldungeon.actors.buffs.Buff;
 import com.shatteredpixel.shatteredpixeldungeon.actors.buffs.Doom;
 import com.shatteredpixel.shatteredpixeldungeon.actors.buffs.FlavourBuff;
+import com.shatteredpixel.shatteredpixeldungeon.actors.buffs.Invisibility;
 import com.shatteredpixel.shatteredpixeldungeon.actors.hero.Hero;
 import com.shatteredpixel.shatteredpixeldungeon.actors.hero.Talent;
 import com.shatteredpixel.shatteredpixeldungeon.actors.hero.abilities.ArmorAbility;
+import com.shatteredpixel.shatteredpixeldungeon.actors.mobs.Mimic;
 import com.shatteredpixel.shatteredpixeldungeon.actors.mobs.Mob;
 import com.shatteredpixel.shatteredpixeldungeon.actors.mobs.npcs.NPC;
 import com.shatteredpixel.shatteredpixeldungeon.effects.CellEmitter;
+import com.shatteredpixel.shatteredpixeldungeon.effects.FloatingText;
 import com.shatteredpixel.shatteredpixeldungeon.effects.Speck;
-import com.shatteredpixel.shatteredpixeldungeon.items.Dewdrop;
 import com.shatteredpixel.shatteredpixeldungeon.items.armor.ClassArmor;
 import com.shatteredpixel.shatteredpixeldungeon.messages.Messages;
 import com.shatteredpixel.shatteredpixeldungeon.scenes.GameScene;
+import com.shatteredpixel.shatteredpixeldungeon.scenes.PixelScene;
 import com.shatteredpixel.shatteredpixeldungeon.sprites.CharSprite;
 import com.shatteredpixel.shatteredpixeldungeon.ui.BuffIndicator;
 import com.shatteredpixel.shatteredpixeldungeon.ui.HeroIcon;
-import com.shatteredpixel.shatteredpixeldungeon.utils.BArray;
 import com.shatteredpixel.shatteredpixeldungeon.utils.GLog;
 import com.watabou.noosa.audio.Sample;
+import com.watabou.utils.BArray;
 import com.watabou.utils.Bundle;
 import com.watabou.utils.PathFinder;
 
@@ -74,8 +77,8 @@ public class Challenge extends ArmorAbility {
 	public float chargeUse( Hero hero ) {
 		float chargeUse = super.chargeUse(hero);
 		if (hero.buff(EliminationMatchTracker.class) != null){
-			//reduced charge use by 20%/36%/50%/60%
-			chargeUse *= Math.pow(0.795, hero.pointsInTalent(Talent.ELIMINATION_MATCH));
+			//reduced charge use by 16%/30%/41%/50%
+			chargeUse *= Math.pow(0.84, hero.pointsInTalent(Talent.ELIMINATION_MATCH));
 		}
 		return chargeUse;
 	}
@@ -97,12 +100,13 @@ public class Challenge extends ArmorAbility {
 			return;
 		}
 
-		if (targetCh.alignment == hero.alignment){
+		if (targetCh.alignment != Char.Alignment.ENEMY
+				&& !(targetCh instanceof Mimic && targetCh.alignment == Char.Alignment.NEUTRAL)){
 			GLog.w(Messages.get(this, "ally_target"));
 			return;
 		}
 
-		boolean[] passable = Dungeon.level.passable.clone();
+		boolean[] passable = BArray.or(Dungeon.level.passable, Dungeon.level.avoid, null);
 		for (Char c : Actor.chars()) {
 			if (c != hero) passable[c.pos] = false;
 		}
@@ -110,14 +114,15 @@ public class Challenge extends ArmorAbility {
 		int[] reachable = PathFinder.distance.clone();
 
 		int blinkpos = hero.pos;
-		if (hero.hasTalent(Talent.CLOSE_THE_GAP)){
+		if (hero.hasTalent(Talent.CLOSE_THE_GAP) && !hero.rooted){
 
 			int blinkrange = 1 + hero.pointsInTalent(Talent.CLOSE_THE_GAP);
-			PathFinder.buildDistanceMap(hero.pos, BArray.not(Dungeon.level.solid,null), blinkrange);
+			PathFinder.buildDistanceMap(hero.pos, BArray.or(Dungeon.level.passable, Dungeon.level.avoid, null), blinkrange);
 
 			for (int i = 0; i < PathFinder.distance.length; i++){
 				if (PathFinder.distance[i] == Integer.MAX_VALUE
 						|| reachable[i] == Integer.MAX_VALUE
+						|| (!Dungeon.level.passable[i] && !(hero.flying && Dungeon.level.avoid[i]))
 						|| i == targetCh.pos){
 					continue;
 				}
@@ -132,13 +137,15 @@ public class Challenge extends ArmorAbility {
 			}
 		}
 
-		if (PathFinder.distance[blinkpos] == Integer.MAX_VALUE){
+		if (reachable[blinkpos] == Integer.MAX_VALUE){
 			GLog.w(Messages.get(this, "unreachable_target"));
+			if (hero.rooted) PixelScene.shake( 1, 1f );
 			return;
 		}
 
-		if (Dungeon.level.distance(blinkpos, targetCh.pos) >= 5){
+		if (Dungeon.level.distance(blinkpos, targetCh.pos) > 5){
 			GLog.w(Messages.get(this, "distant_target"));
+			if (hero.rooted) PixelScene.shake( 1, 1f );
 			return;
 		}
 
@@ -175,6 +182,7 @@ public class Challenge extends ArmorAbility {
 
 		armor.charge -= chargeUse( hero );
 		armor.updateQuickslot();
+		Invisibility.dispel();
 		hero.sprite.zap(target);
 
 		hero.next();
@@ -257,26 +265,18 @@ public class Challenge extends ArmorAbility {
 							hpToHeal = heroBuff.takenDmg;
 						}
 
-						//heals for 30%/50%/65%/75% of taken damage plus 3/6/9/12 bonus, based on talent points
+						//heals for 30%/50%/65%/75% of taken damage plus 5/10/15/20 bonus, based on talent points
 						hpToHeal = (int)Math.round(hpToHeal * (1f - Math.pow(0.707f, Dungeon.hero.pointsInTalent(Talent.INVIGORATING_VICTORY))));
-						hpToHeal += 3*Dungeon.hero.pointsInTalent(Talent.INVIGORATING_VICTORY);
+						hpToHeal += 5*Dungeon.hero.pointsInTalent(Talent.INVIGORATING_VICTORY);
 						hpToHeal = Math.min(hpToHeal, Dungeon.hero.HT - Dungeon.hero.HP);
 						if (hpToHeal > 0){
 							Dungeon.hero.HP += hpToHeal;
 							Dungeon.hero.sprite.emitter().start( Speck.factory( Speck.HEALING ), 0.33f, 6 );
-							Dungeon.hero.sprite.showStatus( CharSprite.POSITIVE, Messages.get(Dewdrop.class, "heal", hpToHeal) );
+							Dungeon.hero.sprite.showStatusWithIcon( CharSprite.POSITIVE, Integer.toString(hpToHeal), FloatingText.HEALING );
 						}
 					}
 				}
 
-				for (Char ch : Actor.chars()) {
-					if (ch.buff(SpectatorFreeze.class) != null) {
-						ch.buff(SpectatorFreeze.class).detach();
-					}
-					if (ch.buff(DuelParticipant.class) != null && ch != target) {
-						ch.buff(DuelParticipant.class).detach();
-					}
-				}
 			} else {
 				if (Dungeon.hero.isAlive()) {
 					GameScene.flash(0x80FFFFFF);
@@ -284,6 +284,15 @@ public class Challenge extends ArmorAbility {
 					if (Dungeon.hero.hasTalent(Talent.ELIMINATION_MATCH)){
 						Buff.affect(target, EliminationMatchTracker.class, 3);
 					}
+				}
+			}
+
+			for (Char ch : Actor.chars()) {
+				if (ch.buff(SpectatorFreeze.class) != null) {
+					ch.buff(SpectatorFreeze.class).detach();
+				}
+				if (ch.buff(DuelParticipant.class) != null && ch != target) {
+					ch.buff(DuelParticipant.class).detach();
 				}
 			}
 		}

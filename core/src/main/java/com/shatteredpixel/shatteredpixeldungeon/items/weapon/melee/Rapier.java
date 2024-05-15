@@ -3,7 +3,7 @@
  * Copyright (C) 2012-2015 Oleg Dolya
  *
  * Shattered Pixel Dungeon
- * Copyright (C) 2014-2023 Evan Debenham
+ * Copyright (C) 2014-2024 Evan Debenham
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,6 +30,7 @@ import com.shatteredpixel.shatteredpixeldungeon.actors.hero.Hero;
 import com.shatteredpixel.shatteredpixeldungeon.levels.Terrain;
 import com.shatteredpixel.shatteredpixeldungeon.levels.features.Door;
 import com.shatteredpixel.shatteredpixeldungeon.messages.Messages;
+import com.shatteredpixel.shatteredpixeldungeon.scenes.PixelScene;
 import com.shatteredpixel.shatteredpixeldungeon.sprites.ItemSpriteSheet;
 import com.shatteredpixel.shatteredpixeldungeon.ui.AttackIndicator;
 import com.shatteredpixel.shatteredpixeldungeon.utils.GLog;
@@ -67,6 +68,22 @@ public class Rapier extends MeleeWeapon {
 
 	@Override
 	protected void duelistAbility(Hero hero, Integer target) {
+		//+(4+lvl) damage, roughly +90% base damage, +67% scaling
+		int dmgBoost = augment.damageFactor(4 + buffedLvl());
+		lungeAbility(hero, target, 1, dmgBoost, this);
+	}
+
+	@Override
+	public String abilityInfo() {
+		int dmgBoost = levelKnown ? 4+buffedLvl() : 4;
+		if (levelKnown){
+			return Messages.get(this, "ability_desc", augment.damageFactor(min()+dmgBoost), augment.damageFactor(max()+dmgBoost));
+		} else {
+			return Messages.get(this, "typical_ability_desc", min(0)+dmgBoost, max(0)+dmgBoost);
+		}
+	}
+
+	public static void lungeAbility(Hero hero, Integer target, float dmgMulti, int dmgBoost, MeleeWeapon wep){
 		if (target == null){
 			return;
 		}
@@ -75,20 +92,21 @@ public class Rapier extends MeleeWeapon {
 		//duelist can lunge out of her FOV, but this wastes the ability instead of cancelling if there is no target
 		if (Dungeon.level.heroFOV[target]) {
 			if (enemy == null || enemy == hero || hero.isCharmedBy(enemy)) {
-				GLog.w(Messages.get(this, "ability_no_target"));
+				GLog.w(Messages.get(wep, "ability_no_target"));
 				return;
 			}
 		}
 
 		if (hero.rooted || Dungeon.level.distance(hero.pos, target) < 2
-				|| Dungeon.level.distance(hero.pos, target)-1 > reachFactor(hero)){
-			GLog.w(Messages.get(this, "ability_bad_position"));
+				|| Dungeon.level.distance(hero.pos, target)-1 > wep.reachFactor(hero)){
+			GLog.w(Messages.get(wep, "ability_target_range"));
+			if (hero.rooted) PixelScene.shake( 1, 1f );
 			return;
 		}
 
 		int lungeCell = -1;
 		for (int i : PathFinder.NEIGHBOURS8){
-			if (Dungeon.level.distance(hero.pos+i, target) <= reachFactor(hero)
+			if (Dungeon.level.distance(hero.pos+i, target) <= wep.reachFactor(hero)
 					&& Actor.findChar(hero.pos+i) == null
 					&& (Dungeon.level.passable[hero.pos+i] || (Dungeon.level.avoid[hero.pos+i] && hero.flying))){
 				if (lungeCell == -1 || Dungeon.level.trueDistance(hero.pos + i, target) < Dungeon.level.trueDistance(lungeCell, target)){
@@ -98,11 +116,12 @@ public class Rapier extends MeleeWeapon {
 		}
 
 		if (lungeCell == -1){
-			GLog.w(Messages.get(this, "ability_bad_position"));
+			GLog.w(Messages.get(wep, "ability_target_range"));
 			return;
 		}
 
 		final int dest = lungeCell;
+
 		hero.busy();
 		Sample.INSTANCE.play(Assets.Sounds.MISS);
 		hero.sprite.jump(hero.pos, dest, 0, 0.1f, new Callback() {
@@ -113,30 +132,32 @@ public class Rapier extends MeleeWeapon {
 				}
 				hero.pos = dest;
 				Dungeon.level.occupyCell(hero);
+				Dungeon.observe();
 
+				hero.belongings.abilityWeapon = wep; //set this early to we can check canAttack
 				if (enemy != null && hero.canAttack(enemy)) {
 					hero.sprite.attack(enemy.pos, new Callback() {
 						@Override
 						public void call() {
-							//+3+lvl damage, equivalent to +67% damage, but more consistent
-							beforeAbilityUsed(hero);
+
+							wep.beforeAbilityUsed(hero, enemy);
 							AttackIndicator.target(enemy);
-							if (hero.attack(enemy, 1f, augment.damageFactor(3 + level()), Char.INFINITE_ACCURACY)) {
+							if (hero.attack(enemy, dmgMulti, dmgBoost, Char.INFINITE_ACCURACY)) {
 								Sample.INSTANCE.play(Assets.Sounds.HIT_STRONG);
 								if (!enemy.isAlive()) {
-									onAbilityKill(hero);
+									wep.onAbilityKill(hero, enemy);
 								}
 							}
 							Invisibility.dispel();
 							hero.spendAndNext(hero.attackDelay());
-							afterAbilityUsed(hero);
+							wep.afterAbilityUsed(hero);
 						}
 					});
 				} else {
-					beforeAbilityUsed(hero);
+					wep.beforeAbilityUsed(hero, null);
 					GLog.w(Messages.get(Rapier.class, "ability_no_target"));
-					hero.spendAndNext(hero.speed());
-					afterAbilityUsed(hero);
+					hero.spendAndNext(1/hero.speed());
+					wep.afterAbilityUsed(hero);
 				}
 			}
 		});

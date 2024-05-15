@@ -9,7 +9,7 @@ import com.shatteredpixel.shatteredpixeldungeon.items.*;
 import com.shatteredpixel.shatteredpixeldungeon.items.armor.*;
 import com.shatteredpixel.shatteredpixeldungeon.items.bags.*;
 import com.shatteredpixel.shatteredpixeldungeon.items.food.MeatPie;
-import com.shatteredpixel.shatteredpixeldungeon.items.potions.AlchemicalCatalyst;
+// import com.shatteredpixel.shatteredpixeldungeon.items.potions.AlchemicalCatalyst;
 import com.shatteredpixel.shatteredpixeldungeon.items.potions.brews.*;
 import com.shatteredpixel.shatteredpixeldungeon.items.potions.elixirs.*;
 import com.shatteredpixel.shatteredpixeldungeon.items.potions.exotic.*;
@@ -164,15 +164,15 @@ public class WndCustomLoot extends Window {
                 WildEnergy.class,
                 BeaconOfReturning.class,
                 SummonElemental.class,
-                AquaBlast.class,
+                // AquaBlast.class,
                 ReclaimTrap.class,
-                FeatherFall.class,
+                // FeatherFall.class,
                 Alchemize.class,
                 MagicalInfusion.class,
                 CurseInfusion.class,
                 Recycle.class,
-                ArcaneCatalyst.class,
-                AlchemicalCatalyst.class,
+                // ArcaneCatalyst.class,
+                // AlchemicalCatalyst.class,
                 GooBlob.class,
                 MetalShard.class
         };

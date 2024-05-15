@@ -3,7 +3,7 @@
  * Copyright (C) 2012-2015 Oleg Dolya
  *
  * Shattered Pixel Dungeon
- * Copyright (C) 2014-2023 Evan Debenham
+ * Copyright (C) 2014-2024 Evan Debenham
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,7 +62,7 @@ public class Warlock extends Mob implements Callback {
 	
 	@Override
 	public int damageRoll() {
-		return Random.NormalIntRange( 12, 18 );
+		return Char.combatRoll( 12, 18 );
 	}
 	
 	@Override
@@ -72,7 +72,7 @@ public class Warlock extends Mob implements Callback {
 	
 	@Override
 	public int drRoll() {
-		return super.drRoll() + Random.NormalIntRange(0, 8);
+		return super.drRoll() + Char.combatRoll(0, 8);
 	}
 	
 	@Override
@@ -115,13 +115,13 @@ public class Warlock extends Mob implements Callback {
 				Sample.INSTANCE.play( Assets.Sounds.DEBUFF );
 			}
 			
-			int dmg = Random.NormalIntRange( 12, 18 );
+			int dmg = Char.combatRoll( 12, 18 );
 			dmg = Math.round(dmg * AscensionChallenge.statModifier(this));
 			enemy.damage( dmg, new DarkBolt() );
 			
 			if (enemy == Dungeon.hero && !enemy.isAlive()) {
 				Badges.validateDeathFromEnemyMagic();
-				Dungeon.fail( getClass() );
+				Dungeon.fail( this );
 				GLog.n( Messages.get(this, "bolt_kill") );
 			}
 		} else {
@@ -147,22 +147,10 @@ public class Warlock extends Mob implements Callback {
 			Dungeon.LimitedDrops.WARLOCK_HP.count++;
 			return new PotionOfHealing();
 		} else {
-			Item i = Generator.randomUsingDefaults(Generator.Category.POTION);
-			int healingTried = 0;
-			while (i instanceof PotionOfHealing){
-				healingTried++;
+			Item i;
+			do {
 				i = Generator.randomUsingDefaults(Generator.Category.POTION);
-			}
-
-			//return the attempted healing potion drops to the pool
-			if (healingTried > 0){
-				for (int j = 0; j < Generator.Category.POTION.classes.length; j++){
-					if (Generator.Category.POTION.classes[j] == PotionOfHealing.class){
-						Generator.Category.POTION.probs[j] += healingTried;
-					}
-				}
-			}
-
+			} while (i instanceof PotionOfHealing);
 			return i;
 		}
 

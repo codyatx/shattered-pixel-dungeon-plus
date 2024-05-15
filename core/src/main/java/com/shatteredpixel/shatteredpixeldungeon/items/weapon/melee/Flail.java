@@ -3,7 +3,7 @@
  * Copyright (C) 2012-2015 Oleg Dolya
  *
  * Shattered Pixel Dungeon
- * Copyright (C) 2014-2023 Evan Debenham
+ * Copyright (C) 2014-2024 Evan Debenham
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -54,13 +54,13 @@ public class Flail extends MeleeWeapon {
 				lvl*Math.round(1.6f*(tier+1));  //+8 per level, up from +5
 	}
 
-	private static float spinBonus = 1f;
+	private static int spinBoost = 0;
 
 	@Override
 	public int damageRoll(Char owner) {
-		int dmg = Math.round(super.damageRoll(owner) * spinBonus);
-		if (spinBonus == 2f) Sample.INSTANCE.play(Assets.Sounds.HIT_STRONG);
-		spinBonus = 1f;
+		int dmg = super.damageRoll(owner) + spinBoost;
+		if (spinBoost > 0) Sample.INSTANCE.play(Assets.Sounds.HIT_STRONG);
+		spinBoost = 0;
 		return dmg;
 	}
 
@@ -68,37 +68,35 @@ public class Flail extends MeleeWeapon {
 	public float accuracyFactor(Char owner, Char target) {
 		SpinAbilityTracker spin = owner.buff(SpinAbilityTracker.class);
 		if (spin != null) {
-			//have to handle this in an actor tied to the regular attack =S
 			Actor.add(new Actor() {
 				{ actPriority = VFX_PRIO; }
 				@Override
 				protected boolean act() {
 					if (owner instanceof Hero && !target.isAlive()){
-						onAbilityKill((Hero)owner);
+						onAbilityKill((Hero)owner, target);
 					}
 					Actor.remove(this);
 					return true;
 				}
 			});
-			//we detach and calculate bonus here in case the attack misses
+			//we detach and calculate bonus here in case the attack misses (e.g. vs. monks)
 			spin.detach();
-			spinBonus = 1f + (spin.spins/3f);
-			if (spinBonus == 2f){
-				return Float.POSITIVE_INFINITY;
-			} else {
-				return super.accuracyFactor(owner, target);
-			}
+			//+(6+2*lvl) damage per spin, roughly +30% base damage, +45% scaling
+			// so +90% base dmg, +135% scaling at 3 spins
+			spinBoost = spin.spins * augment.damageFactor(6 + 2*buffedLvl());
+			return Float.POSITIVE_INFINITY;
 		} else {
-			spinBonus = 1f;
+			spinBoost = 0;
 			return super.accuracyFactor(owner, target);
 		}
 	}
 
-	public float abilityChargeUse( Hero hero ) {
+	@Override
+	protected int baseChargeUse(Hero hero, Char target){
 		if (Dungeon.hero.buff(SpinAbilityTracker.class) != null){
 			return 0;
 		} else {
-			return 2*super.abilityChargeUse(hero);
+			return 1;
 		}
 	}
 
@@ -111,7 +109,7 @@ public class Flail extends MeleeWeapon {
 			return;
 		}
 
-		beforeAbilityUsed(hero);
+		beforeAbilityUsed(hero, null);
 		if (spin == null){
 			spin = Buff.affect(hero, SpinAbilityTracker.class, 3f);
 		}
@@ -124,6 +122,16 @@ public class Flail extends MeleeWeapon {
 		BuffIndicator.refreshHero();
 
 		afterAbilityUsed(hero);
+	}
+
+	@Override
+	public String abilityInfo() {
+		int dmgBoost = levelKnown ? 6 + 2*buffedLvl() : 6;
+		if (levelKnown){
+			return Messages.get(this, "ability_desc", augment.damageFactor(dmgBoost));
+		} else {
+			return Messages.get(this, "typical_ability_desc", augment.damageFactor(dmgBoost));
+		}
 	}
 
 	public static class SpinAbilityTracker extends FlavourBuff {

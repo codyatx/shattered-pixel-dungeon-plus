@@ -3,7 +3,7 @@
  * Copyright (C) 2012-2015 Oleg Dolya
  *
  * Shattered Pixel Dungeon
- * Copyright (C) 2014-2023 Evan Debenham
+ * Copyright (C) 2014-2024 Evan Debenham
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,7 +25,9 @@ import com.shatteredpixel.shatteredpixeldungeon.Assets;
 import com.shatteredpixel.shatteredpixeldungeon.Dungeon;
 import com.shatteredpixel.shatteredpixeldungeon.actors.Actor;
 import com.shatteredpixel.shatteredpixeldungeon.actors.Char;
+import com.shatteredpixel.shatteredpixeldungeon.actors.buffs.Invisibility;
 import com.shatteredpixel.shatteredpixeldungeon.actors.hero.Hero;
+import com.shatteredpixel.shatteredpixeldungeon.actors.hero.Talent;
 import com.shatteredpixel.shatteredpixeldungeon.effects.Pushing;
 import com.shatteredpixel.shatteredpixeldungeon.items.scrolls.ScrollOfTeleportation;
 import com.shatteredpixel.shatteredpixeldungeon.items.scrolls.exotic.ScrollOfPassage;
@@ -49,6 +51,8 @@ public class BeaconOfReturning extends Spell {
 	
 	{
 		image = ItemSpriteSheet.RETURN_BEACON;
+
+		talentChance = 1/(float)Recipe.OUT_QUANTITY;
 	}
 	
 	public int returnDepth	= -1;
@@ -131,7 +135,7 @@ public class BeaconOfReturning extends Spell {
 					if (toPush == hero){
 						returnPos = candidates.get(0);
 					} else {
-						Actor.addDelayed( new Pushing( toPush, toPush.pos, candidates.get(0) ), -1 );
+						Actor.add( new Pushing( toPush, toPush.pos, candidates.get(0) ) );
 						toPush.pos = candidates.get(0);
 						Dungeon.level.occupyCell(toPush);
 					}
@@ -141,7 +145,9 @@ public class BeaconOfReturning extends Spell {
 				}
 			}
 
-			if (!ScrollOfTeleportation.teleportToLocation(hero, returnPos)){
+			if (ScrollOfTeleportation.teleportToLocation(hero, returnPos)){
+				hero.spendAndNext( 1f );
+			} else {
 				return;
 			}
 
@@ -152,15 +158,24 @@ public class BeaconOfReturning extends Spell {
 				return;
 			}
 
+			//cannot return to mining level
+			if (returnDepth >= 11 && returnDepth <= 14 && returnBranch == 1){
+				GLog.w( Messages.get(ScrollOfTeleportation.class, "no_tele") );
+				return;
+			}
+
 			Level.beforeTransition();
+			Invisibility.dispel();
 			InterlevelScene.mode = InterlevelScene.Mode.RETURN;
 			InterlevelScene.returnDepth = returnDepth;
 			InterlevelScene.returnBranch = returnBranch;
 			InterlevelScene.returnPos = returnPos;
 			Game.switchScene( InterlevelScene.class );
 		}
-		hero.spendAndNext( 1f );
 		detach(hero.belongings.backpack);
+		if (Random.Float() < talentChance){
+			Talent.onScrollUsed(curUser, curUser.pos, talentFactor);
+		}
 	}
 	
 	@Override
@@ -180,12 +195,14 @@ public class BeaconOfReturning extends Spell {
 	}
 	
 	private static final String DEPTH	= "depth";
+	private static final String BRANCH	= "branch";
 	private static final String POS		= "pos";
 	
 	@Override
 	public void storeInBundle( Bundle bundle ) {
 		super.storeInBundle( bundle );
 		bundle.put( DEPTH, returnDepth );
+		bundle.put( BRANCH, returnBranch );
 		if (returnDepth != -1) {
 			bundle.put( POS, returnPos );
 		}
@@ -195,25 +212,32 @@ public class BeaconOfReturning extends Spell {
 	public void restoreFromBundle( Bundle bundle ) {
 		super.restoreFromBundle(bundle);
 		returnDepth	= bundle.getInt( DEPTH );
+		returnBranch = bundle.getInt( BRANCH );
 		returnPos	= bundle.getInt( POS );
 	}
 	
 	@Override
 	public int value() {
-		//prices of ingredients, divided by output quantity, rounds down
-		return (int)((50 + 40) * (quantity/5f));
+		return (int)(60 * (quantity/(float)Recipe.OUT_QUANTITY));
+	}
+
+	@Override
+	public int energyVal() {
+		return (int)(12 * (quantity/(float)Recipe.OUT_QUANTITY));
 	}
 	
 	public static class Recipe extends com.shatteredpixel.shatteredpixeldungeon.items.Recipe.SimpleRecipe {
+
+		private static final int OUT_QUANTITY = 5;
 		
 		{
-			inputs =  new Class[]{ScrollOfPassage.class, ArcaneCatalyst.class};
-			inQuantity = new int[]{1, 1};
+			inputs =  new Class[]{ScrollOfPassage.class};
+			inQuantity = new int[]{1};
 			
-			cost = 6;
+			cost = 12;
 			
 			output = BeaconOfReturning.class;
-			outQuantity = 5;
+			outQuantity = OUT_QUANTITY;
 		}
 		
 	}

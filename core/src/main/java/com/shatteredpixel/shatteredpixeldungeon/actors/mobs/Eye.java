@@ -3,7 +3,7 @@
  * Copyright (C) 2012-2015 Oleg Dolya
  *
  * Shattered Pixel Dungeon
- * Copyright (C) 2014-2023 Evan Debenham
+ * Copyright (C) 2014-2024 Evan Debenham
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -69,7 +69,7 @@ public class Eye extends Mob {
 
 	@Override
 	public int damageRoll() {
-		return Random.NormalIntRange(20, 30);
+		return Char.combatRoll(20, 30);
 	}
 
 	@Override
@@ -79,7 +79,7 @@ public class Eye extends Mob {
 	
 	@Override
 	public int drRoll() {
-		return super.drRoll() + Random.NormalIntRange(0, 10);
+		return super.drRoll() + Char.combatRoll(0, 10);
 	}
 	
 	private Ballistica beam;
@@ -96,7 +96,7 @@ public class Eye extends Mob {
 			if (enemy.invisible == 0 && !isCharmedBy(enemy) && fieldOfView[enemy.pos]
 					&& (super.canAttack(enemy) || aim.subPath(1, aim.dist).contains(enemy.pos))){
 				beam = aim;
-				beamTarget = aim.collisionPos;
+				beamTarget = enemy.pos;
 				return true;
 			} else {
 				//if the beam is charged, it has to attack, will aim at previous location of target.
@@ -184,7 +184,7 @@ public class Eye extends Mob {
 			}
 
 			if (hit( this, ch, true )) {
-				int dmg = Random.NormalIntRange( 30, 50 );
+				int dmg = Char.combatRoll( 30, 50 );
 				dmg = Math.round(dmg * AscensionChallenge.statModifier(this));
 				ch.damage( dmg, new DeathGaze() );
 
@@ -195,7 +195,7 @@ public class Eye extends Mob {
 
 				if (!ch.isAlive() && ch == Dungeon.hero) {
 					Badges.validateDeathFromEnemyMagic();
-					Dungeon.fail( getClass() );
+					Dungeon.fail( this );
 					GLog.n( Messages.get(this, "deathgaze_kill") );
 				}
 			} else {
